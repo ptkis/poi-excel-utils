@@ -15,12 +15,13 @@
  */
 package org.hellojavaer.poi.excel.utils.read;
 
+import com.alibaba.fastjson.util.TypeUtils;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Timestamp;
 import java.util.Date;
-
-import com.alibaba.fastjson.util.TypeUtils;
 
 /**
  * provide rich methods for type castting.
@@ -80,8 +81,18 @@ public class ExcelCellValue implements Serializable {
         return TypeUtils.castToBigInteger(originalValue);
     }
 
-    public java.sql.Timestamp getTimestamp() {
-        return TypeUtils.castToTimestamp(originalValue);
+    public Timestamp getTimestamp() {
+        if (originalValue == null) {
+            return null;
+        }
+        if (originalValue instanceof Timestamp) {
+            return (Timestamp) originalValue;
+        }
+        if (originalValue instanceof Date) {
+            return new Timestamp(((Date) originalValue).getTime());
+        }
+        Object timestamp = TypeUtils.castToTimestamp(originalValue);
+        return timestamp != null ? (Timestamp) timestamp : null;
     }
 
     public Object getOriginalValue() {

@@ -15,14 +15,13 @@
  */
 package org.hellojavaer.poi.excel.utils.write;
 
+import org.apache.poi.common.usermodel.HyperlinkType;
+import org.hellojavaer.poi.excel.utils.ExcelUtils;
+
 import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.poi.common.usermodel.Hyperlink;
-import org.hellojavaer.poi.excel.utils.ExcelUtils;
-import org.springframework.util.Assert;
 
 /**
  * Config the mapping between excel column(by index) to Object field(by name).
@@ -36,8 +35,13 @@ public class ExcelWriteFieldMapping implements Serializable {
     private Map<String, Map<Integer, ExcelWriteFieldMappingAttribute>> fieldMapping     = new LinkedHashMap<String, Map<Integer, ExcelWriteFieldMappingAttribute>>();
 
     public ExcelWriteFieldMappingAttribute put(String colIndex, String fieldName) {
-        Assert.notNull(colIndex);
-        Assert.notNull(fieldName);
+        if (colIndex == null) {
+            throw new IllegalArgumentException("colIndex must not be null");
+        }
+        if (fieldName == null) {
+            throw new IllegalArgumentException("fieldName must not be null");
+        }
+        
         Map<Integer, ExcelWriteFieldMappingAttribute> map = fieldMapping.get(fieldName);
         if (map == null) {
             synchronized (fieldMapping) {
@@ -64,7 +68,7 @@ public class ExcelWriteFieldMapping implements Serializable {
         private ExcelWriteCellValueMapping valueMapping;
         private String                     head;
         private String                     linkField;
-        private int                        linkType;
+        private HyperlinkType linkType;
 
         @SuppressWarnings("rawtypes")
         public ExcelWriteFieldMappingAttribute setCellProcessor(ExcelWriteCellProcessor cellProcessor) {
@@ -84,13 +88,13 @@ public class ExcelWriteFieldMapping implements Serializable {
 
         public ExcelWriteFieldMappingAttribute setLinkField(String linkField) {
             this.linkField = linkField;
-            this.linkType = Hyperlink.LINK_URL;
+            this.linkType = HyperlinkType.URL;
             return this;
         }
 
-        public ExcelWriteFieldMappingAttribute setLink(String linkFieldName, int linkType) {
+        public ExcelWriteFieldMappingAttribute setLink(String linkFieldName, HyperlinkType linkType) {
             this.linkField = linkFieldName;
-            this.linkType = Hyperlink.LINK_URL;
+            this.linkType = linkType;
             return this;
         }
 
@@ -111,7 +115,7 @@ public class ExcelWriteFieldMapping implements Serializable {
             return linkField;
         }
 
-        public int getLinkType() {
+        public HyperlinkType getLinkType() {
             return linkType;
         }
 

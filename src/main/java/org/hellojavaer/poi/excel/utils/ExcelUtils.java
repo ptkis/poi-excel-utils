@@ -455,48 +455,26 @@ public class ExcelUtils {
         if (cell == null) {
             return null;
         }
-        int cellType = cell.getCellType();
-        Object value = null;
+        CellType cellType = cell.getCellType();
         switch (cellType) {
-            case Cell.CELL_TYPE_BLANK:
-                value = null;
-                break;
-            case Cell.CELL_TYPE_BOOLEAN:
-                boolean bool = cell.getBooleanCellValue();
-                value = bool;
-                break;
-            case Cell.CELL_TYPE_ERROR:
-                // cell.getErrorCellValue();
-                ExcelReadException e = new ExcelReadException("Cell type error");
-                e.setRowIndex(cell.getRowIndex());
-                e.setColIndex(cell.getColumnIndex());
-                e.setCode(ExcelReadException.CODE_OF_CELL_ERROR);
-                throw e;
-            case Cell.CELL_TYPE_FORMULA:
-                value = cell.getCellFormula();
-                break;
-            case Cell.CELL_TYPE_NUMERIC:
-                Object inputValue = null;//
-                double doubleVal = cell.getNumericCellValue();
+            case BLANK:
+                return null;
+            case BOOLEAN:
+                return cell.getBooleanCellValue();
+            case ERROR:
+                return cell.getErrorCellValue();
+            case FORMULA:
+                return cell.getCellFormula();
+            case NUMERIC:
                 if (DateUtil.isCellDateFormatted(cell)) {
-                    inputValue = DateUtil.getJavaDate(doubleVal);
-                } else {
-                    long longVal = Math.round(cell.getNumericCellValue());
-                    if (Double.parseDouble(longVal + ".0") == doubleVal) {
-                        inputValue = longVal;
-                    } else {
-                        inputValue = doubleVal;
-                    }
+                    return cell.getDateCellValue();
                 }
-                value = inputValue;
-                break;
-            case Cell.CELL_TYPE_STRING:
-                value = cell.getStringCellValue();
-                break;
+                return cell.getNumericCellValue();
+            case STRING:
+                return cell.getStringCellValue();
             default:
-                throw new RuntimeException("Unsupport cell type " + cellType);
+                return null;
         }
-        return value;
     }
 
     private static Object procValueConvert(ExcelReadContext<?> context, Row row, Cell cell,
@@ -671,7 +649,7 @@ public class ExcelUtils {
     private static class InnerCell {
 
         private CellStyle cellStyle;
-        private int       cellType;
+        private CellType cellType;
 
         public CellStyle getCellStyle() {
             return cellStyle;
@@ -681,11 +659,11 @@ public class ExcelUtils {
             this.cellStyle = cellStyle;
         }
 
-        public int getCellType() {
+        public CellType getCellType() {
             return cellType;
         }
 
-        public void setCellType(int cellType) {
+        public void setCellType(CellType cellType) {
             this.cellType = cellType;
         }
     }
@@ -703,14 +681,13 @@ public class ExcelUtils {
             int theme = sheetProcessor.getTheme();
             if (theme == ExcelWriteTheme.BASE) {
                 style = wookbook.createCellStyle();
-                style.setFillPattern(CellStyle.SOLID_FOREGROUND);
+                style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
                 style.setFillForegroundColor((short) 44);
-                style.setBorderBottom(CellStyle.BORDER_THIN);
-                style.setBorderLeft(CellStyle.BORDER_THIN);
-                style.setBorderRight(CellStyle.BORDER_THIN);
-                style.setBorderTop(CellStyle.BORDER_THIN);
-                // style.setBottomBorderColor((short) 44);
-                style.setAlignment(CellStyle.ALIGN_CENTER);
+                style.setBorderBottom(BorderStyle.THIN);
+                style.setBorderLeft(BorderStyle.THIN);
+                style.setBorderRight(BorderStyle.THIN);
+                style.setBorderTop(BorderStyle.THIN);
+                style.setAlignment(HorizontalAlignment.CENTER);
             }
             // freeze Pane
             if (sheetProcessor.getHeadRowIndex() != null && sheetProcessor.getHeadRowIndex() == 0) {
@@ -961,8 +938,7 @@ public class ExcelUtils {
         return templateRow;
     }
 
-    private static void writeStyleAfterFinish(boolean useTemplate, Sheet sheet,
-                                              ExcelWriteSheetProcessor<?> sheetProcessor) {
+    private static void writeStyleAfterFinish(boolean useTemplate, Sheet sheet, ExcelWriteSheetProcessor<?> sheetProcessor) {
         if (useTemplate) {
             return;
         }
@@ -980,6 +956,15 @@ public class ExcelUtils {
                 sheet.autoSizeColumn(column);
             }
         }
+    }
+
+    private static void writeStyle(Workbook wb, CellStyle style) {
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setAlignment(HorizontalAlignment.CENTER);
     }
 
     private static void writeDataValidations(Sheet sheet, ExcelWriteSheetProcessor sheetProcessor) {
@@ -1206,103 +1191,35 @@ public class ExcelUtils {
     }
 
     @SuppressWarnings("unused")
-    private static void writeCell(Cell cell, Object val, boolean userTemplate,
+    private static void writeCell(Cell cell, Object val, boolean useTemplate,
                                   ExcelWriteFieldMappingAttribute attribute, Object bean) {
         if (attribute != null && attribute.getLinkField() != null) {
-            String addressFieldName = attribute.getLinkField();
-            String address = null;
+            String linkField = attribute.getLinkField();
+            Object linkValue = null;
             if (bean != null) {
-                address = (String) getFieldValue(bean, addressFieldName, true);
+                linkValue = getFieldValue(bean, linkField, false);
             }
-            Workbook wb = cell.getRow().getSheet().getWorkbook();
-
-            Hyperlink link = wb.getCreationHelper().createHyperlink(attribute.getLinkType());
-            link.setAddress(address);
-            cell.setHyperlink(link);
-            // Its style can't inherit from cell.
-            CellStyle style = wb.createCellStyle();
-            Font hlinkFont = wb.createFont();
-            hlinkFont.setUnderline(Font.U_SINGLE);
-            hlinkFont.setColor(IndexedColors.BLUE.getIndex());
-            style.setFont(hlinkFont);
-            if (cell.getCellStyle() != null) {
-                style.setFillBackgroundColor(cell.getCellStyle().getFillBackgroundColor());
+            if (linkValue != null) {
+                Workbook wb = cell.getRow().getSheet().getWorkbook();
+                Hyperlink link = wb.getCreationHelper().createHyperlink(attribute.getLinkType());
+                link.setAddress(linkValue.toString());
+                cell.setHyperlink(link);
             }
-            cell.setCellStyle(style);
         }
         if (val == null) {
-            cell.setCellValue((String) null);
+            cell.setBlank();
             return;
         }
-        Class<?> clazz = val.getClass();
-        if (val instanceof Byte) {// Double
-            Byte temp = (Byte) val;
-            cell.setCellValue((double) temp.byteValue());
-        } else if (val instanceof Short) {
-            Short temp = (Short) val;
-            cell.setCellValue((double) temp.shortValue());
-        } else if (val instanceof Integer) {
-            Integer temp = (Integer) val;
-            cell.setCellValue((double) temp.intValue());
-        } else if (val instanceof Long) {
-            Long temp = (Long) val;
-            cell.setCellValue((double) temp.longValue());
-        } else if (val instanceof Float) {
-            Float temp = (Float) val;
-            cell.setCellValue((double) temp.floatValue());
-        } else if (val instanceof Double) {
-            Double temp = (Double) val;
-            cell.setCellValue((double) temp.doubleValue());
-        } else if (val instanceof Date) {// Date
-            Date dateVal = (Date) val;
-            long time = dateVal.getTime();
-            // read is based on 1899/12/31 but DateUtil.getExcelDate is base on
-            // 1900/01/01
-            if (time >= TIME_1899_12_31_00_00_00_000 && time < TIME_1900_01_01_00_00_00_000) {
-                Date incOneDay = new Date(time + 24 * 60 * 60 * 1000);
-                double d = DateUtil.getExcelDate(incOneDay);
-                cell.setCellValue(d - 1);
-            } else {
-                cell.setCellValue(dateVal);
-            }
-
-            if (!userTemplate) {
-                Workbook wb = cell.getRow().getSheet().getWorkbook();
-                CellStyle cellStyle = cell.getCellStyle();
-                if (cellStyle == null) {
-                    cellStyle = wb.createCellStyle();
-                }
-                DataFormat dataFormat = wb.getCreationHelper().createDataFormat();
-                // @see #BuiltinFormats
-                // 0xe, "m/d/yy"
-                // 0x14 "h:mm"
-                // 0x16 "m/d/yy h:mm"
-                // {@linke https://en.wikipedia.org/wiki/Year_10,000_problem}
-                /** [1899/12/31 00:00:00:000~1900/01/01 00:00:000) */
-                if (time >= TIME_1899_12_31_00_00_00_000 && time < TIME_1900_01_02_00_00_00_000) {
-                    cellStyle.setDataFormat(dataFormat.getFormat("h:mm"));
-                    // cellStyle.setDataFormat(dataFormat.getFormat("m/d/yy h:mm"));
-                } else {
-                    // if ( time % (24 * 60 * 60 * 1000) == 0) {//for time
-                    // zone,we can't use this way.
-                    Calendar calendar = Calendar.getInstance();
-                    calendar.setTime(dateVal);
-                    int hour = calendar.get(Calendar.HOUR_OF_DAY);
-                    int minute = calendar.get(Calendar.MINUTE);
-                    int second = calendar.get(Calendar.SECOND);
-                    int millisecond = calendar.get(Calendar.MILLISECOND);
-                    if (millisecond == 0 && second == 0 && minute == 0 && hour == 0) {
-                        cellStyle.setDataFormat(dataFormat.getFormat("m/d/yy"));
-                    } else {
-                        cellStyle.setDataFormat(dataFormat.getFormat("m/d/yy h:mm"));
-                    }
-                }
-                cell.setCellStyle(cellStyle);
-            }
-        } else if (val instanceof Boolean) {// Boolean
-            cell.setCellValue(((Boolean) val).booleanValue());
-        } else {// String
-            cell.setCellValue((String) val.toString());
+        if (val instanceof String) {
+            cell.setCellValue((String) val);
+        } else if (val instanceof Number) {
+            cell.setCellValue(((Number) val).doubleValue());
+        } else if (val instanceof Boolean) {
+            cell.setCellValue((Boolean) val);
+        } else if (val instanceof Date) {
+            cell.setCellValue((Date) val);
+        } else {
+            cell.setCellValue(val.toString());
         }
     }
 

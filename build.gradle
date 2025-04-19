@@ -13,8 +13,8 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.apache.poi:poi:5.3.0'
-    implementation 'org.apache.poi:poi-ooxml:5.3.0'
+    implementation 'org.apache.poi:poi:5.4.1'
+    implementation 'org.apache.poi:poi-ooxml:5.4.1'
     implementation 'com.alibaba:fastjson:1.2.83'
     implementation 'org.springframework:spring-core:6.2.3'
     implementation 'org.springframework:spring-beans:6.2.3'

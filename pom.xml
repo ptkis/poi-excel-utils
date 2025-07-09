@@ -12,7 +12,7 @@
 	<url>https://github.com/hellojavaer/poi-excel-utils</url>
 
 	<properties>
-		<junit.version>4.11</junit.version>
+		<junit.version>4.13.1</junit.version>
 		<gpg.skip>true</gpg.skip>
 		<javadoc.skip>false</javadoc.skip>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

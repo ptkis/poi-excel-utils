@@ -467,7 +467,7 @@ public class ExcelUtils {
                 return cell.getCellFormula();
             case NUMERIC:
                 if (DateUtil.isCellDateFormatted(cell)) {
-                    return cell.getDateCellValue();
+                    return DateUtil.getLocalDateTime(cell.getNumericCellValue());
                 }
                 return cell.getNumericCellValue();
             case STRING:
